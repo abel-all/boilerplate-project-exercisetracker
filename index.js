@@ -94,26 +94,53 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 app.get('/api/users/:_id/logs', async (req, res) => {
   try {
     const theuserId = req.params._id;
-    const currentUser = await User.findById(theuserId).exec();
     const { from, to, limit } = req.query;
-    const listOfExercises = Exercises.find({userId: theuserId})
-    const listOfExercisesReadyToSend = []
-    listOfExercises.map(({description, duration, date}, i) => {
-      listOfExercisesReadyToSend.push({
-        description: description,
-        duration: parseInt(duration),
-        date: date,
-      });
-    })
+
+    // Find the user
+    const currentUser = await User.findById(theuserId).exec();
+    if (!currentUser) {
+      return res.json({ error: "User not found" });
+    }
+
+    // Build the query for exercises
+    let query = { userId: theuserId };
+
+    // Add date filtering if `from` or `to` are provided
+    if (from || to) {
+      query.date = {};
+      if (from) {
+        query.date.$gte = new Date(from).toDateString();
+      }
+      if (to) {
+        query.date.$lte = new Date(to).toDateString();
+      }
+    }
+
+    // Find exercises and apply limit
+    let exercisesQuery = Exercises.find(query);
+    if (limit) {
+      exercisesQuery = exercisesQuery.limit(parseInt(limit));
+    }
+
+    const listOfExercises = await exercisesQuery.exec();
+
+    // Format the exercises for the response
+    const listOfExercisesReadyToSend = listOfExercises.map((exercise) => ({
+      description: exercise.description,
+      duration: parseInt(exercise.duration),
+      date: new Date(exercise.date).toDateString(),
+    }));
+
+    // Send the response
     res.json({
       username: currentUser.username,
       count: listOfExercisesReadyToSend.length,
       _id: theuserId,
-      log: listOfExercisesReadyToSend
-    }
-    )
+      log: listOfExercisesReadyToSend,
+    });
   } catch (error) {
-    res.json({ error: "Can't find the given user in DB"})
+    console.error(error);
+    res.json({ error: "Can't find the given user in DB" });
   }
 });
 
