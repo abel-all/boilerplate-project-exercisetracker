@@ -109,15 +109,17 @@ app.get('/api/users/:_id/logs', async (req, res) => {
     if (from || to) {
       query.date = {};
       if (from) {
-        query.date.$gte = new Date(from).toDateString();
+        query.date.$gte = new Date(from); // Filter dates >= from
       }
       if (to) {
-        query.date.$lte = new Date(to).toDateString();
+        query.date.$lte = new Date(to); // Filter dates <= to
       }
     }
 
-    // Find exercises and apply limit
+    // Find exercises
     let exercisesQuery = Exercises.find(query);
+
+    // Apply limit if provided
     if (limit) {
       exercisesQuery = exercisesQuery.limit(parseInt(limit));
     }
@@ -128,7 +130,7 @@ app.get('/api/users/:_id/logs', async (req, res) => {
     const listOfExercisesReadyToSend = listOfExercises.map((exercise) => ({
       description: exercise.description,
       duration: parseInt(exercise.duration),
-      date: new Date(exercise.date).toDateString(),
+      date: new Date(exercise.date).toDateString(), // Ensure date is in the correct format
     }));
 
     // Send the response
